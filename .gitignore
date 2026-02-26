@@ -1,2 +1,7 @@
 venv
 .claude
+Grundrisse/
+__pycache__/
+output/
+corrective_action_docs/
+risk_mitigation_docs/

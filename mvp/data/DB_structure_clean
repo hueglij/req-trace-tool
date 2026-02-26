@@ -1,0 +1,379 @@
+//////////////////////////////////////////////////////////////
+// CORE CATALOGS & MASTER DATA
+//////////////////////////////////////////////////////////////
+
+Table country {
+  id        int      [pk]
+  name      varchar  [not null, unique]   // e.g. Switzerland, United States
+  iso_code  varchar  [not null, unique]   // e.g. CH, US
+}
+
+Table site {
+  id          int      [pk]
+  name        varchar  [not null]           // e.g. Headquarters, Plant A, Plant B
+  iso_code    varchar  [not null, unique]   // e.g. HQ, PA, PB
+  address     varchar                       // Street, number
+  postal_code varchar                       // Zip code 
+  city        varchar                       // Basel, Warsaw
+  country_id  int      [not null, ref: > country.id]
+}
+
+Table level {
+  id          int      [pk]
+  name        varchar  [not null]       // e.g. "Level 3"
+  name_short  varchar  [not null]       // e.g. "L3"
+  site_id     int      [not null, ref: > site.id]
+}
+
+Table site_coordinate_value {
+  site_id int [not null, ref: > site.id]
+  coordinate_id int [not null, ref: > coordinate.id]
+  percentage_value decimal(5,2) [not null]   // 0.00 .. 100.00   
+}
+
+Table coordinate {
+  id    int     [pk]
+}
+
+Table coordinate_y {
+  coordinate_id    int     [pk, ref: > coordinate.id]
+  code  varchar [not null, unique]     // A, B, C ... H
+}
+
+Table coordinate_x {
+  coordinate_id    int     [pk, ref: > coordinate.id]
+  code  varchar [not null, unique]     // 01, 02 ... 17
+}
+
+//////////////////////////////////////////////////////////////
+// PROJECT + LOCATION
+//////////////////////////////////////////////////////////////
+
+Table project {
+  id          int     [pk]
+  name        varchar
+  location_id int     [not null, ref: > project_location.id]
+}
+
+Table project_location {
+  id           int [pk]
+
+  project_id   int [not null, unique, ref: > project.id]
+  level_id     int [not null, ref: > level.id]
+
+  y_start_id   int [not null, ref: > coordinate_y.id]
+  y_end_id     int [not null, ref: > coordinate_y.id]
+
+  x_start_id   int [not null, ref: > coordinate_x.id]
+  x_end_id     int [not null, ref: > coordinate_x.id]
+}
+
+//////////////////////////////////////////////////////////////
+// REQUIREMENTS + RISK + MITIGATIONS (TEMPLATES)
+//////////////////////////////////////////////////////////////
+
+Table subchapter {
+  id        int     [pk]
+  name      varchar [not null, unique]
+}
+
+Table requirement {
+  id                int      [pk]
+  description       varchar  [not null]
+  purpose           varchar
+  is_standard       bool     [not null, default: false]
+  is_gxp            bool     [not null, default: false]
+  is_must           bool     [not null, default: false]
+  remark_enabled    bool     [not null, default: false]
+  remark_required   bool     [not null, default: false]
+  subchapter_id     int      [not null, ref: > subchapter.id]
+}
+
+Table risk {
+  id                                int       [pk]
+  possible_error                    varchar
+  harm                              varchar
+  cause                             varchar
+  severity_before_mitigation        int       // 1..5
+  likelihood_before_mitigation      int       // 1..5
+  detectability_before_mitigation   int       // 1..5
+}
+
+Table dq {
+  id                                int      [pk]
+  description                       varchar
+  severity_after_mitigation         int      // 1..5
+  likelihood_after_mitigation       int      // 1..5
+  detectability_after_mitigation    int      // 1..5
+}
+
+Table xq {
+  id                                int      [pk]
+  description                       varchar
+  purpose                           varchar
+  severity_after_mitigation         int      // 1..5
+  likelihood_after_mitigation       int      // 1..5
+  detectability_after_mitigation    int      // 1..5
+  input                             varchar
+  expected_output                   varchar
+}
+
+//////////////////////////////////////////////////////////////
+// TEMPLATE RELATIONSHIPS (AUTO-ASSIGN DEFAULTS)
+//////////////////////////////////////////////////////////////
+
+Table requirement_risk {
+  requirement_id int [not null, ref: > requirement.id]
+  risk_id        int [not null, ref: > risk.id]
+
+  indexes {
+    (requirement_id, risk_id) [pk]
+  }
+}
+
+Table dq_risk {
+  dq_id   int [not null, ref: > dq.id]
+  risk_id int [not null, ref: > risk.id]
+
+  indexes {
+    (dq_id, risk_id) [pk]
+  }
+}
+
+Table xq_risk {
+  xq_id   int [not null, ref: > xq.id]
+  risk_id int [not null, ref: > risk.id]
+
+  indexes {
+    (xq_id, risk_id) [pk]
+  }
+}
+
+//////////////////////////////////////////////////////////////
+// EQUIPMENT TYPES + ASSET TYPES
+//////////////////////////////////////////////////////////////
+
+Table asset_type {
+  id    int      [pk]
+  name  varchar  [not null, unique]   // main / peripheral
+}
+
+Table equipment_type {
+  id            int      [pk]
+  name          varchar  [not null, unique]
+  asset_type_id int      [ref: > asset_type.id]
+}
+
+Table equipment_type_requirement {
+  equipment_type_id int [not null, ref: > equipment_type.id]
+  requirement_id    int [not null, ref: > requirement.id]
+
+  indexes {
+    (equipment_type_id, requirement_id) [pk]
+  }
+}
+
+//////////////////////////////////////////////////////////////
+// ASSET SUPERTYPE + SUBTYPES
+//////////////////////////////////////////////////////////////
+
+Table asset {
+  id                int [pk]
+  name              varchar
+  equipment_type_id int [not null, ref: > equipment_type.id]
+  project_id        int [not null, ref: > project.id]
+}
+
+Table main_asset {
+  asset_id                  int [pk, ref: > asset.id]
+  business_process_step_id  int [not null, ref: > business_process_step.id]
+}
+
+Table peripheral_asset {
+  asset_id        int [pk, ref: > asset.id]
+  main_asset_id   int [not null, ref: > asset.id]   // reference to main asset
+}
+
+//////////////////////////////////////////////////////////////
+// PROCESS + RESPONSIBILITIES
+//////////////////////////////////////////////////////////////
+
+Table business_process_step {
+  id   int     [pk]
+  name varchar
+}
+
+Table system_owner {
+  id    int      [pk]
+  name  varchar
+  role  varchar
+}
+
+Table business_process_step_system_owner {
+  business_process_step_id int [not null, ref: > business_process_step.id]
+  system_owner_id          int [not null, ref: > system_owner.id]
+
+  indexes {
+    (business_process_step_id, system_owner_id) [pk]
+  }
+}
+
+//////////////////////////////////////////////////////////////
+// PROJECT PHASE GATING
+//////////////////////////////////////////////////////////////
+
+Table project_phase {
+  project_id  int     [not null, ref: > project.id]
+  phase_id    int     [not null, ref: > document_type.id] // URS, RISK, DQ...
+  status      varchar [not null]  // Draft, Approved
+  approved_at datetime
+  approved_by varchar
+
+  indexes {
+    (project_id, phase_id) [pk]
+  }
+}
+
+//////////////////////////////////////////////////////////////
+// DOCUMENT CONTROL + VERSIONING
+//////////////////////////////////////////////////////////////
+
+Table document_type {
+  id   int [pk]
+  name varchar  // URS, RISK, DQ, XQ_PLAN, XQ_EXECUTION
+}
+
+Table document {
+  id               int      [pk]
+  project_id       int      [not null, ref: > project.id]
+  document_type_id int      [not null, ref: > document_type.id]
+
+  status           varchar  [not null]           // Draft, Approved, Terminated
+  is_active        bool     [not null, default: true]
+
+  created_at       datetime [not null]
+  created_by       varchar  [not null]
+}
+
+Table document_version {
+  id           int       [pk]
+  document_id  int       [not null, ref: > document.id]
+  version_no   int       [not null]
+  file_path    varchar   [not null]
+  created_at   timestamp [not null]
+  created_by   varchar   [not null]
+  change_note  varchar
+
+  indexes {
+    (document_id, version_no) [unique]
+  }
+}
+
+//////////////////////////////////////////////////////////////
+// RISK MITIGATION EXECUTION
+//////////////////////////////////////////////////////////////
+
+Table mitigation_category {
+  id   int     [pk]
+  name varchar [not null]
+}
+
+Table corrective_action {
+  id               int     [pk]
+  name             varchar [not null]
+  responsible      varchar [not null]
+  status           varchar [not null]
+  proof_file_path  varchar [not null]
+}
+
+Table mitigation {
+  id                     int [pk]
+  risk_id                int [not null, ref: > risk.id]
+  phase                  varchar [not null] // DQ or XQ_EXECUTION
+  file_path              varchar 
+  status                 varchar [not null]
+  passed                 bool
+  failed_description     varchar
+  mitigation_category_id int [ref: > mitigation_category.id]
+  remark                 varchar
+  need_correction        bool
+  justification          varchar
+  corrective_action_id   int [ref: > corrective_action.id]
+}
+
+//////////////////////////////////////////////////////////////
+// RISK PHASE DECISION (MANDATORY FOR RISKS >= 4)
+//////////////////////////////////////////////////////////////
+
+Table asset_risk_phase_decision {
+  asset_id       int [not null, ref: > asset.id]
+  risk_id        int [not null, ref: > risk.id]
+  chosen_phase   varchar [not null] // 'DQ' or 'XQ'
+  decided_by     varchar
+  decided_at     datetime
+
+  indexes {
+    (asset_id, risk_id) [pk]
+  }
+}
+
+//////////////////////////////////////////////////////////////
+// MEDIA
+//////////////////////////////////////////////////////////////
+
+Table media {
+  id   int [pk]
+  name varchar
+}
+
+Table equipment_type_media {
+  equipment_type_id int   [not null, ref: > equipment_type.id]
+  media_id          int   [not null, ref: > media.id]
+  default_value     varchar
+
+  indexes {
+    (equipment_type_id, media_id) [pk]
+  }
+}
+
+Table asset_media {
+  asset_id    int [not null, ref: > asset.id]
+  media_id    int [not null, ref: > media.id]
+  media_value varchar
+
+  indexes {
+    (asset_id, media_id) [pk]
+  }
+}
+
+//////////////////////////////////////////////////////////////
+// UNIFIED TRACEABILITY MATRIX
+//////////////////////////////////////////////////////////////
+
+Table asset_traceability_matrix {
+  asset_id       int [not null, ref: > asset.id]
+  requirement_id int [not null, ref: > requirement.id]
+  risk_id        int [not null, ref: > risk.id]
+
+  // AUTO ASSIGN FLAGS + REMARKS
+  requirement_is_auto_assign bool
+  requirement_remark         varchar
+
+  risk_is_auto_assign        bool
+  risk_remark                varchar
+
+  dq_id                      int  [ref: > dq.id]
+  dq_is_auto_assign          bool
+  dq_remark                  varchar
+
+  xq_id                      int  [ref: > xq.id]
+  xq_is_auto_assign          bool
+  xq_output                  varchar
+  xq_remark                  varchar
+
+  mitigation_id              int [ref: > mitigation.id]
+
+  indexes {
+    (asset_id, requirement_id, risk_id) [pk]
+  }
+}
