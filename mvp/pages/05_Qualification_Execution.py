@@ -37,95 +37,22 @@ from app_core.policy import (
     is_editable, check_phase_gate
 )
 from app_core.pdf import render_document
-from app_core.utils import safe_str, safe_int, excel_to_bool, calculate_quantification, calculate_risk_level
-from app_core.style import apply_global_style, render_sticky_header
+from app_core.utils import (
+    safe_str, safe_int, excel_to_bool, calculate_quantification, calculate_risk_level,
+    LIKELIHOOD_LEVELS, SEVERITY_LEVELS, CELL_COLOR_MAP, MATRIX_STYLE,
+    int_or_none, likelihood_bucket, build_matrix_counts, render_risk_matrix,
+)
+from app_core.style import (
+    apply_global_style, render_sticky_header,
+    css_escape,
+)
 
-LIKELIHOOD_LEVELS = [
-    (1, "Very unlikely (1)"),
-    (2, "Unlikely (2)"),
-    (3, "Possible (3)"),
-    (4, "Likely (4)"),
-    (6, "Very likely (6)"),
-]
-
-SEVERITY_LEVELS = [
-    (3, "High (3)"),
-    (2, "Medium (2)"),
-    (1, "Low (1)"),
-]
-
-CELL_COLOR_MAP = {
-    (1, 1): "green",
-    (1, 2): "green",
-    (1, 3): "green",
-    (1, 4): "yellow",
-    (1, 6): "yellow",
-    (2, 1): "green",
-    (2, 2): "yellow",
-    (2, 3): "yellow",
-    (2, 4): "yellow",
-    (2, 6): "red",
-    (3, 1): "yellow",
-    (3, 2): "yellow",
-    (3, 3): "red",
-    (3, 4): "red",
-    (3, 6): "red",
-}
-
-MATRIX_STYLE = """
-<style>
-.risk-matrix-wrapper {
-  width: 100%;
-}
-.risk-matrix-title {
-  font-weight: 600;
-  margin-bottom: 0.25rem;
-}
-.risk-matrix-axis {
-  text-align: center;
-  font-size: 0.85rem;
-  color: #444;
-  margin-bottom: 0.35rem;
-}
-.risk-matrix {
-  width: 100%;
-  border-collapse: collapse;
-  table-layout: fixed;
-  font-size: 0.85rem;
-}
-.risk-matrix th,
-.risk-matrix td {
-  border: 1px solid #d0d4da;
-  padding: 0.4rem;
-  text-align: center;
-}
-.risk-matrix th {
-  background: #f6f7f9;
-  font-weight: 600;
-}
-.risk-matrix .cell-green {
-  background: #cdeccd;
-}
-.risk-matrix .cell-yellow {
-  background: #fff1a8;
-}
-.risk-matrix .cell-red {
-  background: #f7b5b5;
-}
-.risk-matrix .cell-green,
-.risk-matrix .cell-yellow,
-.risk-matrix .cell-red {
-  font-weight: 700;
-}
-</style>
-"""
-
-# ============================================================================
-# Helper functions
-# ============================================================================
-
-def _css_escape(value: str) -> str:
-    return value.replace("\\", "\\\\").replace('"', '\\"')
+# Aliases for call-sites that use the old underscore-prefixed names
+_css_escape = css_escape
+_int_or_none = int_or_none
+_likelihood_bucket = likelihood_bucket
+_build_matrix_counts = build_matrix_counts
+_render_risk_matrix = render_risk_matrix
 
 
 def _sanitize_filename(value: str) -> str:
@@ -146,88 +73,6 @@ def _save_uploaded_doc(uploaded_file, asset_id: int, subfolder: str = "risk_miti
         with open(dest, "wb") as handle:
             handle.write(uploaded_file.getbuffer())
     return str(dest)
-
-
-def _int_or_none(value):
-    if value is None:
-        return None
-    if isinstance(value, float) and pd.isna(value):
-        return None
-    try:
-        return int(value)
-    except (TypeError, ValueError):
-        return None
-
-
-def _likelihood_bucket(value) -> Optional[int]:
-    if value is None:
-        return None
-    if value <= 1:
-        return 1
-    if value <= 2:
-        return 2
-    if value <= 3:
-        return 3
-    if value <= 4:
-        return 4
-    return 6
-
-
-def _build_matrix_counts(rows):
-    counts = {
-        severity: {likelihood: 0 for likelihood, _ in LIKELIHOOD_LEVELS}
-        for severity, _ in SEVERITY_LEVELS
-    }
-    for severity, occurrence, detection in rows:
-        if severity is None or occurrence is None or detection is None:
-            continue
-        severity_val = _int_or_none(severity)
-        occurrence_val = _int_or_none(occurrence)
-        detection_val = _int_or_none(detection)
-        if severity_val not in (1, 2, 3):
-            continue
-        if occurrence_val is None or detection_val is None:
-            continue
-        likelihood_score = occurrence_val * detection_val
-        likelihood_bucket = _likelihood_bucket(likelihood_score)
-        if likelihood_bucket is None:
-            continue
-        counts[severity_val][likelihood_bucket] += 1
-    return counts
-
-
-def _render_risk_matrix(title: str, counts: dict) -> None:
-    header_cells = "".join(
-        f"<th>{label}</th>" for _, label in LIKELIHOOD_LEVELS
-    )
-    body_rows = []
-    for severity, label in SEVERITY_LEVELS:
-        row_cells = []
-        for likelihood, _ in LIKELIHOOD_LEVELS:
-            cell_color = CELL_COLOR_MAP.get((severity, likelihood), "green")
-            value = counts.get(severity, {}).get(likelihood, 0)
-            row_cells.append(f'<td class="cell-{cell_color}">{value}</td>')
-        body_rows.append(
-            f"<tr><th>{label}</th>{''.join(row_cells)}</tr>"
-        )
-    table_html = f"""
-<div class="risk-matrix-wrapper">
-  <div class="risk-matrix-title">{title}</div>
-  <div class="risk-matrix-axis">Likelihood</div>
-  <table class="risk-matrix">
-    <thead>
-      <tr>
-        <th>Impact</th>
-        {header_cells}
-      </tr>
-    </thead>
-    <tbody>
-      {''.join(body_rows)}
-    </tbody>
-  </table>
-</div>
-"""
-    st.markdown(table_html, unsafe_allow_html=True)
 
 
 def _get_xq_after_fields(xq_id: Optional[int]) -> dict:
@@ -518,7 +363,7 @@ div[data-testid="stVerticalBlock"] div[data-testid="stVerticalBlock"]:has(.exec-
 
 page_name = "05_Qualification_Execution"
 
-render_sticky_header("Qualification Execution (xQ)")
+_save_container = render_sticky_header("Qualification Execution (xQ)", with_save=True)
 st.markdown("Execute tests and document the results.")
 
 # Get selected asset
@@ -796,7 +641,7 @@ with st.container():
 
     can_edit_exec = is_editable(asset_phase, Tables.MITIGATION, "passed")
 
-    save_exec_clicked = st.button("Save Results", disabled=not can_edit_exec, type="primary")
+    save_exec_clicked = _save_container.button("Save Results", disabled=not can_edit_exec)
 
     # ---- SAVE LOGIC ----
     if save_exec_clicked:

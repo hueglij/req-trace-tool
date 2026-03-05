@@ -37,14 +37,13 @@ from app_core.policy import (
 )
 from app_core.pdf import render_document
 from app_core.utils import ensure_output_dir, safe_str, excel_to_bool, calculate_quantification, calculate_risk_level, get_data_path
-from app_core.style import apply_global_style, render_sticky_header
+from app_core.style import (
+    apply_global_style, render_sticky_header,
+    REQUIRED_EMPTY_BG, REQUIRED_FILLED_BG,
+    css_escape, is_filled, queue_required_style,
+)
 
-REQUIRED_EMPTY_BG = "#fff3bf"
-REQUIRED_FILLED_BG = "#e6f4ea"
-
-
-def _css_escape(value: str) -> str:
-    return value.replace("\\", "\\\\").replace('"', '\\"')
+_css_escape = css_escape
 
 @st.cache_data(show_spinner=False)
 def _load_site_coordinates(modified_at: float):
@@ -203,36 +202,8 @@ def _render_floorplan_preview(
     st.image(png_bytes, width="stretch")
 
 
-def _is_filled(value, empty_values=None) -> bool:
-    if empty_values and value in empty_values:
-        return False
-    if value is None:
-        return False
-    if isinstance(value, str):
-        return value.strip() != ""
-    return True
-
-
-def _queue_required_style(style_rules, widget_type: str, label: str, is_filled: bool) -> None:
-    color = REQUIRED_FILLED_BG if is_filled else REQUIRED_EMPTY_BG
-    safe_label = _css_escape(label)
-    if widget_type == "text":
-        style_rules.append(
-            f'div[data-testid="stTextInput"] input[aria-label="{safe_label}"] {{ background-color: {color} !important; }}'
-        )
-        return
-    if widget_type == "textarea":
-        style_rules.append(
-            f'div[data-testid="stTextArea"] textarea[aria-label="{safe_label}"] {{ background-color: {color} !important; }}'
-        )
-        return
-    if widget_type == "select":
-        style_rules.append(
-            f'div[data-testid="stSelectbox"]:has([aria-label="{safe_label}"]) div[data-baseweb="select"] > div {{ background-color: {color} !important; }}'
-        )
-        style_rules.append(
-            f'div[data-testid="stSelectbox"] [aria-label="{safe_label}"] {{ background-color: {color} !important; }}'
-        )
+_is_filled = is_filled
+_queue_required_style = queue_required_style
 
 
 def _render_req_label(text: str) -> None:
@@ -337,7 +308,7 @@ st.markdown(
 
 page_name = "01_URS_Composer"
 
-render_sticky_header("URS Composer - Existing Project")
+_save_container = render_sticky_header("URS Composer - Existing Project", with_save=True)
 st.markdown("Manage requirements and generate URS documents for an existing project.")
 
 # ============================================================================
@@ -1063,10 +1034,8 @@ SUBCHAPTER_ICONS = {
     Subchapter.DELIVERY_ACCEPTANCE: "package",
 }
 
-if asset_phase == Phase.URS:
-    save_all_clicked = st.button("Save Remarks", disabled=not can_edit_remark)
-else:
-    save_all_clicked = False
+_save_disabled = asset_phase != Phase.URS or not can_edit_remark
+save_all_clicked = _save_container.button("Save Remarks", disabled=_save_disabled)
 if save_all_clicked:
     df = load_table(Tables.ASSET_TRACEABILITY_MATRIX)
     changed = 0

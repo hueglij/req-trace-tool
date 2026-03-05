@@ -214,8 +214,8 @@ for _, row_data in display_df.iterrows():
     xq_exec_state = _phase_state(phase, Phase.XQ_EXECUTION)
 
     _render_action(row_cols[1], urs_state, f"urs_{asset_id}", "pages/01_URS_Composer.py", asset_id)
-    _render_action(row_cols[2], risk_state, f"risk_{asset_id}", "pages/03_Risk_Assessment.py", asset_id)
-    _render_action(row_cols[3], dq_state, f"dq_{asset_id}", "pages/02_DQ.py", asset_id)
+    _render_action(row_cols[2], risk_state, f"risk_{asset_id}", "pages/02_Risk_Assessment.py", asset_id)
+    _render_action(row_cols[3], dq_state, f"dq_{asset_id}", "pages/03_DQ.py", asset_id)
     _render_action(row_cols[4], xq_plan_state, f"xq_plan_{asset_id}", "pages/04_Qualification_Plan.py", asset_id)
     _render_action(row_cols[5], xq_exec_state, f"xq_exec_{asset_id}", "pages/05_Qualification_Execution.py", asset_id)
 
