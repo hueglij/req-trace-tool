@@ -10,27 +10,71 @@ A Streamlit-based web application for managing the full equipment qualification 
 
 ## What problem does this solve?
 
-Equipment qualification in regulated environments (GxP, FDA 21 CFR Part 11, Annex 11) is documentation-heavy and error-prone when managed in Word/Excel manually. This tool provides a structured, workflow-driven interface that:
+Equipment qualification in regulated environments is documentation-heavy and error-prone when managed in Word/Excel manually. This tool provides a structured, workflow-driven interface that:
 
 - Ensures all requirements are captured and traceable
 - Links URS requirements to risk items and qualification tests automatically
 - Enforces phase-gate progression so teams can't skip steps
-- Generates compliant PDF documents ready for review and approval
+- Generates PDF documents ready for review and approval
 
 ---
 
-## Current Status (February 2026)
+## Current Status (March 2026)
 
 The MVP is actively in development. The following pages and features are working:
 
-| Module | Status | Description |
-|---|---|---|
-| Project Overview (Dashboard) | Working | Overview of all assets and their current phase |
-| URS Composer | Working | Catalog-based requirement assignment, custom URS, PDF export |
-| Risk Assessment (FMEA) | Working | Risk catalog, severity/probability scoring, mitigation tracking |
-| Design Qualification (DQ) | Working | DQ checklist linked to URS requirements |
-| Qualification Plan (xQ Plan) | Under Construction | Test planning linked to URS/risk items |
-| Qualification Execution (xQ) | Under Construction | Test execution with pass/fail recording |
+| Module | Description |
+|---|---|
+| Project Overview (Dashboard) | Overview of all assets and their current phase |
+| URS Composer | Catalog-based requirement assignment, custom URS, PDF export |
+| Risk Assessment (FMEA) | Risk catalog, severity/probability scoring, mitigation tracking |
+| Design Qualification (DQ) | DQ checklist linked to URS requirements |
+| Qualification Plan (xQ Plan) | Test planning linked to URS/risk items |
+| Qualification Execution (xQ Execution) | Test execution with pass/fail recording |
+
+---
+
+## Quick Start (Windows)
+
+Follow these steps to run the MVP locally.
+
+### 1. Clone the repository
+```bash
+git clone https://github.com/hueglij/req-trace-tool.git
+cd req-trace-tool
+```
+
+### 2. Create and activate a virtual environment
+```bash
+python -m venv venv
+venv\Scripts\activate
+```
+
+### 3. Install dependencies
+```bash
+pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+### 4. Initialize the project data
+Create the initial dummy data required for the application.
+```bash
+python init_data.py
+```
+
+### 5. Start the MVP app
+```bash
+cd mvp
+streamlit run app.py
+```
+The app will start locally and open in your browser (usually at http://localhost:8501).
+
+### 6. Stop the app
+Press:
+```bash
+CTRL + C
+```
+in the terminal.
 
 ---
 
@@ -113,7 +157,7 @@ New Project
 
 ## Roadmap
 
-- [ ] Finish xQ Phases and fix bugs
+- [ ] Finish xQ Phases
 - [ ] Replace Excel data layer with SQLite
 - [ ] User authentication and role-based access 
 - [ ] Cloud deployment (Streamlit Community Cloud)
@@ -122,6 +166,6 @@ New Project
 
 ## About
 
-Built as a personal project to solve a real pain point in generating highly standardized URS with relating and repeating risks and qualification tasks. Minimizes the manual workforce by creating standardized documents. 
+Built as a small project to solve a real pain point in generating highly standardized URS with relating and repeating risks and qualification tasks. Minimizes the manual workforce by creating standardized documents. 
 
 Feedback and ideas welcome — open an issue or reach out directly.
