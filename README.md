@@ -1,6 +1,6 @@
 # Compliance Workflow Tool — Equipment Qualification Web App (MVP)
 
-> **Note:** This repository currently contains only this README. The source code will be published here once the MVP is feature-complete.
+> **Note:** The MVP is actively in development.
 
 ---
 
@@ -21,7 +21,7 @@ Equipment qualification in regulated environments is documentation-heavy and err
 
 ## Current Status (March 2026)
 
-The MVP is actively in development. The following pages and features are working:
+The following pages and features are implemented:
 
 | Module | Description |
 |---|---|
@@ -143,7 +143,12 @@ New Project
      ▼
 6. Done ── All sections read-only, documents archived
 ```
+---
 
+## Database Structure
+> *Screenshot: ER-diagramm of Database*
+
+![Database Structure](screenshots/db_structure.png)
 
 ---
 
@@ -157,7 +162,7 @@ New Project
 
 ## Roadmap
 
-- [ ] Finish xQ Phases
+- [X] Finish xQ Phases
 - [ ] Replace Excel data layer with SQLite
 - [ ] User authentication and role-based access 
 - [ ] Cloud deployment (Streamlit Community Cloud)
